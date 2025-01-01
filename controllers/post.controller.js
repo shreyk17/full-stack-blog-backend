@@ -1,4 +1,5 @@
 import Post from "../models/post.model.js";
+import User from "../models/user.model.js";
 
 export const getPosts = async (req, res) => {
   const posts = await Post.find();
@@ -11,7 +12,20 @@ export const getPost = async (req, res) => {
 };
 
 export const createPost = async (req, res) => {
-  const newPost = new Post(req.body);
+  // check clerkUserId
+  const clerkUserId = req.auth.userId;
+
+  if (!clerkUserId) {
+    return res.status(401).json({ success: false, message: "Not authorized!" });
+  }
+
+  const user = await User.findOne({ clerkUserId });
+
+  if (!user) {
+    return res.status(404).json({ success: false, message: "User not found!" });
+  }
+
+  const newPost = new Post({ user: user._id, ...req.body });
 
   const post = await newPost.save();
 
@@ -21,10 +35,30 @@ export const createPost = async (req, res) => {
 };
 
 export const deletePost = async (req, res) => {
-  const deletePost = await Post.findByIdAndDelete(req.params.id);
+  // getting clerk userID
+  const clerkUserId = req.auth.userId;
 
-  res.status(204).json({
-    success: true,
-    message: "Post deleted successfully!",
+  console.log(clerkUserId);
+
+  if (!clerkUserId) {
+    return res.status(401).json({ success: false, message: "Not authorized!" });
+  }
+
+  const user = await User.findOne({ clerkUserId });
+
+  if (!user) {
+    return res.status(404).json({ success: false, message: "User not found!" });
+  }
+
+  const deletePost = await Post.findByIdAndDelete({
+    _id: req.params.id,
+    user: user._id,
   });
+
+  if (!deletePost) {
+    return res
+      .status(403)
+      .json({ success: false, message: "You can delete only your post!" });
+  }
+  res.status(204).json("Post deleted successfully!");
 };
