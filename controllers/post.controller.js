@@ -1,5 +1,14 @@
+import ImageKit from "imagekit";
 import Post from "../models/post.model.js";
 import User from "../models/user.model.js";
+import slugify from "slugify";
+
+// IMAGEKIT KEYS
+const imagekit = new ImageKit({
+  urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
+  publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
+  privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
+});
 
 export const getPosts = async (req, res) => {
   const posts = await Post.find();
@@ -25,7 +34,33 @@ export const createPost = async (req, res) => {
     return res.status(404).json({ success: false, message: "User not found!" });
   }
 
-  const newPost = new Post({ user: user._id, ...req.body });
+  // create new slug for each post from title
+  //   let slug = req.body.title.replace(/ /g, "-").toLowerCase();
+
+  //   let existingPost = await Post.findOne({ slug });
+
+  //   let counter = 2;
+
+  //   while (existingPost) {
+  //     slug = `${slug}-${counter}`;
+  //     existingPost = await Post.findOne({ slug });
+  //     counter++;
+  //   }
+
+  const cleanTitle = req.body.title.trim().replace(/\s+/g, " "); // Replace multiple spaces with a single space
+  const slug = slugify(cleanTitle, { lower: true, strict: true });
+  //let slug = slugify(req.body.title, { lower: true, strict: true });
+  let existingItem = await Post.findOne({ slug });
+  let uniqueSlug = slug;
+  let counter = 1;
+
+  while (existingItem) {
+    uniqueSlug = `${slug}-${counter}`;
+    existingItem = await Post.findOne({ slug: uniqueSlug });
+    counter++;
+  }
+
+  const newPost = new Post({ user: user._id, slug: uniqueSlug, ...req.body });
 
   const post = await newPost.save();
 
@@ -61,4 +96,9 @@ export const deletePost = async (req, res) => {
       .json({ success: false, message: "You can delete only your post!" });
   }
   res.status(204).json("Post deleted successfully!");
+};
+
+export const uploadAuth = async (req, res) => {
+  const results = imagekit.getAuthenticationParameters();
+  res.send(results);
 };

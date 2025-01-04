@@ -8,9 +8,17 @@ import webhookRouter from "./routes/webhook.route.js";
 import morgan from "morgan";
 import connectDB from "./libraries/connectDB.js";
 import { clerkMiddleware } from "@clerk/express";
+import cors from "cors";
 
 const app = express();
 
+// FRONTEND URL
+const URL = process.env.CLIENT_URL || process.env.CLIENT_BACKUP_URL;
+
+// CORS CALL
+app.use(cors(URL));
+
+// CLERK MIDDLEWARE
 app.use(clerkMiddleware());
 
 // moving webhooks to resolve body-parser and express conflicts
@@ -18,6 +26,16 @@ app.use("/webhooks", webhookRouter);
 
 // middlewars
 app.use(express.json());
+
+// imagekit middleware
+app.use(function (req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept"
+  );
+  next();
+});
 
 // PORT
 const port = process.env.PORT || 3001;
