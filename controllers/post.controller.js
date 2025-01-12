@@ -11,8 +11,19 @@ const imagekit = new ImageKit({
 });
 
 export const getPosts = async (req, res) => {
-  const posts = await Post.find();
-  res.status(200).json({ success: true, data: posts });
+  // getting the page number
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 2;
+
+  const posts = await Post.find()
+    .limit(limit)
+    .skip((page - 1) * limit);
+
+  const totalPost = await Post.countDocuments();
+
+  const hasMore = page * limit < totalPost;
+  res.status(200).json({ success: true, data: posts, hasMorePost: hasMore });
+  //res.status(200).json({posts, hasMore});
 };
 
 export const getPost = async (req, res) => {
